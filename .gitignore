@@ -1,0 +1,6 @@
+.env
+blog.db
+Pipfile
+Pipfile.lock
+tokex.txt
+__pycache__/
