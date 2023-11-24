@@ -4,6 +4,8 @@ from src.auth.routers import auth_router
 from src.blog.routers import blog_router
 from src.auth.models import User
 from src.blog.models import Category, Post
+
+from src.comments.models import Comment
 from core.database import Base, engine
 
 
