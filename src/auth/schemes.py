@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Optional
 from datetime import datetime
 
 
@@ -11,6 +12,7 @@ class UserScheme(BaseModel):
 
 
 class UserCreateScheme(UserScheme):
+    role: Optional[str] = Field(default="user")
     password: str = Field(pattern="[A-Za-z0-9]{5,}")
 
 

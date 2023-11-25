@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from core.database import get_db, SessionLocal
-from src.auth.logic import get_current_user
+from src.auth.utils import get_current_user
 from .models import Category, Post
 from .logic import update_post_fields
 from .schemes import (
@@ -18,6 +18,16 @@ blog_router = APIRouter(prefix="/blog", tags=["blog"])
 @blog_router.get("/category-list")
 async def category_list(db: SessionLocal = Depends(get_db)):
     return db.query(Category).all()
+
+
+@blog_router.get("/category/{category_id}", response_model=ReadCategoryScheme)
+async def get_category(category_id: int, db: SessionLocal = Depends(get_db)):
+    category = db.query(Category).get(category_id)
+
+    if not category:
+        raise HTTPException(status_code=204, detail="Category doesnt exists")
+
+    return category
 
 
 @blog_router.post("/create-category", response_model=ReadCategoryScheme)

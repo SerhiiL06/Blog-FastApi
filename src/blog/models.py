@@ -25,3 +25,5 @@ class Post(Base):
 
     owner = Column(Integer, ForeignKey("users.id"))
     category = Column(Integer, ForeignKey("categories.id"))
+
+    comments = relationship("Comment")

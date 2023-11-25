@@ -1,4 +1,7 @@
 from pydantic import Field, BaseModel, ConfigDict
+from typing import Annotated, List
+from src.comments.schemes import ReadCommentScheme
+
 from typing import Optional
 
 
@@ -6,10 +9,6 @@ class CategoryScheme(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     title: str = Field(max_length=50)
-
-
-class ReadCategoryScheme(CategoryScheme):
-    id: int
 
 
 class PostScheme(BaseModel):
@@ -30,3 +29,10 @@ class PostReadScheme(PostUpdateScheme):
     id: int
     owner: int
     category: int
+    comments: list[ReadCommentScheme] = []
+
+
+class ReadCategoryScheme(CategoryScheme):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    posts: list[PostReadScheme] = []
