@@ -13,11 +13,17 @@ from core.database import database_dependens
 admin_auth_router = APIRouter(prefix="/admin", tags=["admin auth"])
 
 
+# all users in this endpoint
 @admin_auth_router.get("/user-list", response_model=list[UserReadScheme])
-async def user_list(user: current_user, db: database_dependens):
+async def user_list(user: current_user, db: database_dependens, role: str = None):
     check_role(user_id=user.get("user_id"), db=db)
 
-    return db.query(User).all()
+    user_list = db.query(User)
+
+    if role:
+        return user_list.filter(User.role == role).all()
+
+    return user_list.all()
 
 
 @admin_auth_router.delete("/delete-user/{user_id}")

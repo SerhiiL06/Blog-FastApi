@@ -44,11 +44,6 @@ async def login_user(
     return token
 
 
-@auth_router.get("/user-list", response_model=list[UserReadScheme])
-async def user_list(db: database_dependens):
-    return db.query(User).all()
-
-
 @auth_router.get("/users/me", response_model=UserReadScheme)
 async def get_profile(
     user: current_user,

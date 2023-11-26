@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from core.database import get_db, SessionLocal
-from src.auth.utils import get_current_user
+from core.database import SessionLocal, database_dependens
+from src.auth.utils import current_user
+from src.auth.logic import check_role
 from .models import Category, Post
 from .logic import update_post_fields
 from .schemes import (
@@ -16,12 +17,12 @@ blog_router = APIRouter(prefix="/blog", tags=["blog"])
 
 
 @blog_router.get("/category-list")
-async def category_list(db: SessionLocal = Depends(get_db)):
+async def category_list(db: database_dependens):
     return db.query(Category).all()
 
 
 @blog_router.get("/category/{category_id}", response_model=ReadCategoryScheme)
-async def get_category(category_id: int, db: SessionLocal = Depends(get_db)):
+async def get_category(category_id: int, db: database_dependens):
     category = db.query(Category).get(category_id)
 
     if not category:
@@ -31,7 +32,11 @@ async def get_category(category_id: int, db: SessionLocal = Depends(get_db)):
 
 
 @blog_router.post("/create-category", response_model=ReadCategoryScheme)
-async def create_category(category: CategoryScheme, db: SessionLocal = Depends(get_db)):
+async def create_category(
+    category: CategoryScheme, user: current_user, db: database_dependens
+):
+    check_role(user.get("user_id"), db)
+
     new_category = Category(**category.model_dump())
     db.add(new_category)
     db.commit()
@@ -40,12 +45,12 @@ async def create_category(category: CategoryScheme, db: SessionLocal = Depends(g
 
 
 @blog_router.get("/post-list")
-async def post_list(db: SessionLocal = Depends(get_db)):
+async def post_list(db: database_dependens):
     return db.query(Post).all()
 
 
 @blog_router.get("/single_post/{post_id}", response_model=PostReadScheme)
-async def single_post(post_id: int, db: SessionLocal = Depends(get_db)):
+async def single_post(post_id: int, db: database_dependens):
     post = db.query(Post).get(post_id)
     if not post:
         return HTTPException(status_code=204, detail="Post doesnt exists")
@@ -54,18 +59,18 @@ async def single_post(post_id: int, db: SessionLocal = Depends(get_db)):
 
 
 @blog_router.get("/my-posts", response_model=list[PostReadScheme])
-async def get_my_post(
-    current_user: dict = Depends(get_current_user), db: SessionLocal = Depends(get_db)
-):
-    my_posts = db.query(Post).filter(Post.owner == current_user.get("user_id")).all()
+async def get_my_post(user: current_user, db: database_dependens):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authorizate please")
+    my_posts = db.query(Post).filter(Post.owner == user.get("user_id")).all()
     return my_posts
 
 
 @blog_router.post("/create-post", response_model=PostReadScheme)
 async def post_list(
     post: PostCreateScheme,
-    current_user: dict = Depends(get_current_user),
-    db: SessionLocal = Depends(get_db),
+    current_user: current_user,
+    db: database_dependens,
 ):
     if not current_user:
         return HTTPException(status_code=401, detail="you must authorization")
@@ -79,10 +84,13 @@ async def post_list(
 
 
 @blog_router.delete("/delete-post/{post_id}")
-async def post_list(post_id: int, db: SessionLocal = Depends(get_db)):
+async def post_list(post_id: int, user: current_user, db: database_dependens):
     post = db.query(Post).get(post_id)
     if not post:
         return HTTPException(status_code=204, detail="Post doesnt exists")
+
+    if post.owner.id != user.get("user_id"):
+        raise HTTPException(status_code=401, detail="you can delete only your posts")
 
     db.delete(post)
     db.commit()
@@ -92,12 +100,18 @@ async def post_list(post_id: int, db: SessionLocal = Depends(get_db)):
 
 @blog_router.patch("/update-post/{post_id}", response_model=PostReadScheme)
 async def update_post(
-    post_id: int, update_info: PostUpdateScheme, db: SessionLocal = Depends(get_db)
+    post_id: int,
+    update_info: PostUpdateScheme,
+    user: current_user,
+    db: database_dependens,
 ):
     post = db.query(Post).get(post_id)
 
     if not post:
         return HTTPException(status_code=204, detail="Post doesnt exists")
+
+    if post.owner != user.get("user_id"):
+        raise HTTPException(status_code=401, detail="you can delete only your posts")
 
     update_post_fields(post, update_info)
 

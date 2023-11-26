@@ -9,10 +9,10 @@ class UserScheme(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
+    role: Optional[str] = Field(default="user")
 
 
 class UserCreateScheme(UserScheme):
-    role: Optional[str] = Field(default="user")
     password: str = Field(pattern="[A-Za-z0-9]{5,}")
 
 
