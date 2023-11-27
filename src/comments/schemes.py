@@ -1,5 +1,6 @@
 from pydantic import Field, BaseModel, ConfigDict
 from src.auth.schemes import UserScheme
+from typing import Optional
 from datetime import datetime
 
 
@@ -16,3 +17,9 @@ class ReadCommentScheme(CommentScheme):
     user: int
 
     post: int
+
+
+class SendEmailScheme(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    subject: str = Field(max_length=150)
+    text: Optional[str] = Field(max_length=250)

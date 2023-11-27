@@ -36,3 +36,8 @@ class ReadCategoryScheme(CategoryScheme):
     model_config = ConfigDict(from_attributes=True)
     id: int
     posts: list[PostReadScheme] = []
+
+
+class BookmarkScheme(BaseModel):
+    post: int
+    user: int

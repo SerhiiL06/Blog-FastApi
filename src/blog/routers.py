@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from core.database import SessionLocal, database_dependens
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi_mail import FastMail, MessageSchema
+from typing import Annotated, List
+from config import MAIL_CONFIG
+from core.database import database_dependens
 from src.auth.utils import current_user
 from src.auth.logic import check_role
-from .models import Category, Post
+from src.auth.models import User
+from .models import Category, Post, Bookmark
 from .logic import update_post_fields
 from .schemes import (
     ReadCategoryScheme,
@@ -10,6 +14,7 @@ from .schemes import (
     PostCreateScheme,
     PostReadScheme,
     PostUpdateScheme,
+    BookmarkScheme,
 )
 
 
@@ -49,9 +54,9 @@ async def post_list(db: database_dependens):
     return db.query(Post).all()
 
 
-@blog_router.get("/single_post/{post_id}", response_model=PostReadScheme)
+@blog_router.get("/single_post/{post_id}", response_model=list[PostReadScheme])
 async def single_post(post_id: int, db: database_dependens):
-    post = db.query(Post).get(post_id)
+    post = db.query(Post).join(Post.comments).all()
     if not post:
         return HTTPException(status_code=204, detail="Post doesnt exists")
 
@@ -79,6 +84,21 @@ async def post_list(
 
     db.add(new_post)
     db.commit()
+
+    html = (
+        f"""<p>Hi this test mail, thanks for using Fastapi-mail {new_post.text}</p> """
+    )
+
+    message = MessageSchema(
+        recipients=[current_user.get("email")],
+        subject="Hello",
+        subtype="html",
+        body=html,
+    )
+
+    email = FastMail(MAIL_CONFIG)
+
+    await email.send_message(message=message)
 
     return new_post
 
@@ -118,3 +138,44 @@ async def update_post(
     db.commit()
 
     return post
+
+
+@blog_router.get("/add-to-bookmark/{post_id}")
+async def bookmarks(user: current_user, db: database_dependens, post_id: int):
+    if not current_user:
+        return HTTPException(status_code=401, detail="authorizate please")
+
+    new_bookmark = (
+        db.query(Bookmark)
+        .filter(Bookmark.post == post_id, Bookmark.user == user.get("user_id"))
+        .first()
+    )
+
+    if not new_bookmark:
+        new_bookmark = Bookmark(post=post_id, user=user.get("user_id"))
+
+        db.add(new_bookmark)
+
+        db.commit()
+
+        return Response(content="Well done!", status_code=200)
+
+    db.delete(new_bookmark)
+
+    db.commit()
+
+    return Response(content="Bookmark was delete", status_code=200)
+
+
+@blog_router.get("/my-bookmarks", response_model=list[PostReadScheme])
+async def my_bookmarks(user: current_user, db: database_dependens):
+    if not user:
+        raise HTTPException(status_code=401, detail="auth please")
+    posts = (
+        db.query(Post)
+        .join(Bookmark, Post.id == Bookmark.post)
+        .filter(Bookmark.user == user.get("user_id"))
+        .all()
+    )
+
+    return posts

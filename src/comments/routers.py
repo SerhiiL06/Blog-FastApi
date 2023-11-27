@@ -1,11 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from core.database import database_dependens
 
 from src.auth.utils import current_user
+from src.auth.models import User
 
+from fastapi_mail import MessageSchema, FastMail
+from config import MAIL_CONFIG
+from typing import Annotated
 
 from src.blog.models import Post
-from .schemes import CommentScheme, ReadCommentScheme
+from .schemes import CommentScheme, ReadCommentScheme, SendEmailScheme
 from .models import Comment
 from .logic import do_comment
 
@@ -58,3 +62,24 @@ async def update_comment(
 @comments_router.delete("/{comment_id}")
 async def delete_comment(comment_id: int, user: current_user, db: database_dependens):
     return do_comment(comment_id=comment_id, user=user, db=db)
+
+
+@comments_router.post("/send-email/{user_id}")
+async def send_email(message: SendEmailScheme, db: database_dependens, user_id: int):
+    email = FastMail(MAIL_CONFIG)
+
+    recipient = db.query(User).get(user_id)
+
+    if not recipient:
+        raise HTTPException(status_code=204, detail="user doesnt exists")
+
+    msg = MessageSchema(
+        recipients=[recipient.email],
+        subject=message.subject,
+        body=message.text,
+        subtype="html",
+    )
+
+    await email.send_message(message=msg)
+
+    return "Message was sent"

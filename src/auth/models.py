@@ -1,5 +1,6 @@
 from core.database import Base
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship
 from typing import Literal
 from datetime import datetime
 
@@ -18,3 +19,5 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     hashed_password = Column(String)
+
+    bookmarks = relationship("Bookmark")

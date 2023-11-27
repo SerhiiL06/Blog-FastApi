@@ -27,3 +27,15 @@ class Post(Base):
     category = Column(Integer, ForeignKey("categories.id"))
 
     comments = relationship("Comment")
+
+
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    post = Column(Integer, ForeignKey("posts.id"))
+
+    user = Column(Integer, ForeignKey("users.id"))
+
+    posts = relationship("Post")
